@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المعرض السحابي الفاخر | أداء فائق الذكاء</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --bg-gradient: radial-gradient(circle at 50% 50%, #0f172a 0%, #020617 100%);
+            --glass-card: rgba(30, 41, 59, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --neon-cyan: #06b6d4;
+            --text-premium: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-premium);
+            margin: 0;
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        .header-section {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+        .header-section h1 {
+            font-size: 3rem;
+            font-weight: 900;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #22d3ee, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header-section p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .container {
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+        
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 25px;
+        }
+
+        /* كرت الصورة الذي يدعم الـ Lazy Loading الاحترافي */
+        .gallery-item {
+            background: var(--glass-card);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            aspect-ratio: 1 / 1;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        /* تأثير تمويه خلفي خفيف (Skeleton effect) أثناء تحميل الصورة لأول مرة */
+        .gallery-item.loading-placeholder {
+            background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+            background-size: 200% 100%;
+            animation: skeleton-glow 1.5s infinite;
+        }
+
+        .gallery-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(6, 182, 212, 0.2);
+            border-color: rgba(6, 182, 212, 0.4);
+        }
+        
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            opacity: 0; /* تبدأ مخفية لتظهر بتأثير Fade-in ناعم */
+            transition: opacity 0.5s ease;
+        }
+        
+        /* يظهر الـ Fade-in بمجرد تحميل الصورة بنجاح */
+        .gallery-item img.loaded {
+            opacity: 1;
+        }
+
+        .status-msg {
+            text-align: center;
+            font-size: 1.3rem;
+            color: var(--text-muted);
+            grid-column: 1 / -1;
+            padding: 100px 0;
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.9);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            padding: 20px;
+        }
+        .modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-wrapper {
+            max-width: 90vw;
+            max-height: 70vh;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7);
+        }
+        .modal-img {
+            max-width: 100%;
+            max-height: 70vh;
+            object-fit: contain;
+            display: block;
+            transition: transform 0.3s ease;
+        }
+        .modal-img.zoomed {
+            transform: scale(1.5);
+            cursor: zoom-out;
+        }
+
+        .modal-controls {
+            margin-top: 25px;
+            display: flex;
+            gap: 15px;
+        }
+        
+        .btn {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-premium);
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        .btn:hover {
+            background: var(--text-premium);
+            color: #020617;
+        }
+        .btn-accent {
+            background: linear-gradient(135deg, #06b6d4, #6366f1);
+            border: none;
+            color: #fff;
+        }
+        .btn-accent:hover {
+            box-shadow: 0 5px 15px rgba(6, 182, 212, 0.4);
+            color: #fff;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-premium);
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+        .close-modal:hover {
+            background: #ef4444;
+            color: white;
+            transform: rotate(90deg);
+        }
+
+        @keyframes skeleton-glow {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-section">
+        <h1>معرض الصور السحابي ذكي الأداء</h1>
+        <p>تصفح وتحميل فائق السرعة والخفة بدعم الأنظمة الذكية</p>
+    </div>
+
+    <div class="container">
+        <div class="gallery-grid" id="gallery">
+            <div class="status-msg" id="status"><i class="fas fa-spinner fa-spin"></i> جاري استدعاء الصور بلمح البصر...</div>
+        </div>
+    </div>
+
+    <div class="modal" id="photoModal">
+        <button class="close-modal" id="closeBtn"><i class="fas fa-times"></i></button>
+        <div class="modal-wrapper">
+            <img src="" alt="View" class="modal-img" id="modalImg">
+        </div>
+        <div class="modal-controls">
+            <button class="btn" id="zoomBtn"><i class="fas fa-search-plus"></i> تكبير</button>
+            <a href="" download="" target="_blank" class="btn btn-accent" id="downloadBtn"><i class="fas fa-download"></i> تحميل للصورة</a>
+        </div>
+    </div>
+
+    <script>
+        const CLOUD_NAME = "dt5pdj978";
+        const SERVER_URL = "http://localhost:3000/api/images";
+        
+        // صورة افتراضية كـ Placeholder بديلة في حال كانت الصورة محذوفة أو مكسورة
+        const PLACEHOLDER_IMG = "https://images.unsplash.com/photo-1594322436404-5a0526db4d13?q=80&w=600&auto=format&fit=crop";
+
+        const modal = document.getElementById('photoModal');
+        const modalImg = document.getElementById('modalImg');
+        const closeBtn = document.getElementById('closeBtn');
+        const zoomBtn = document.getElementById('zoomBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        // 1. تهيئة الـ IntersectionObserver للمراقبة الذكية
+        const imageObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                // عندما يصبح الكرت قريباً من الشاشة (قبل 200px من ظهوره)
+                if (entry.isIntersecting) {
+                    const item = entry.target;
+                    const img = item.querySelector('img');
+                    
+                    if (img && img.dataset.src) {
+                        img.src = img.dataset.src; // حقن الرابط الفعلي لبدء التحميل
+                        img.removeAttribute('data-src');
+                    }
+                    
+                    observer.unobserve(item); // إلغاء المراقبة بمجرد بدء التحميل لتوفير طاقة المعالج
+                }
+            });
+        }, {
+            rootMargin: "0px 0px 200px 0px" // تحميل مسبق مريح لعين المستخدم قبل التمرير للأسفل
+        });
+
+        async function fetchGallery() {
+            const galleryContainer = document.getElementById('gallery');
+            const statusMsg = document.getElementById('status');
+
+            try {
+                const response = await fetch(SERVER_URL);
+                const data = await response.json();
+
+                if (!data.success) throw new Error(data.error);
+                if (statusMsg) statusMsg.remove();
+
+                data.images.forEach(img => {
+                    if (!img.public_id || !img.format) return;
+
+                    // إنشاء الكرت مضافاً إليه أنيميشن الـ Skeleton
+                    const item = document.createElement('div');
+                    item.className = 'gallery-item loading-placeholder';
+                    
+                    const thumbUrl = `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/w_350,h_350,c_fill,f_auto,q_auto/v${img.version}/${img.public_id}.${img.format}`;
+                    
+                    // نضع الرابط في الـ dataset-src وليس الـ src المباشر لمنع المتصفح من سحب الـ 400 صورة دفعة واحدة
+                    const imgElement = document.createElement('img');
+                    imgElement.dataset.src = thumbUrl;
+                    imgElement.alt = "Asset";
+
+                    // 2. معالجة تحميل الصورة بنجاح (تفعيل تأثير الـ Fade-in وإلغاء الـ Skeleton)
+                    imgElement.onload = () => {
+                        imgElement.classList.add('loaded');
+                        item.classList.remove('loading-placeholder');
+                    };
+
+                    // 3. معالجة الأخطاء الذكية للصور المكسورة أو المحذوفة
+                    imgElement.onerror = () => {
+                        imgElement.src = PLACEHOLDER_IMG;
+                        imgElement.classList.add('loaded');
+                        item.classList.remove('loading-placeholder');
+                    };
+
+                    item.appendChild(imgElement);
+                    
+                    // أحداث الـ Click لفتح المودال
+                    item.onclick = () => {
+                        const previewUrl = `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/w_1200,f_auto,q_auto/v${img.version}/${img.public_id}.${img.format}`;
+                        const downloadUrl = `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/fl_attachment/v${img.version}/${img.public_id}.${img.format}`;
+                        
+                        modalImg.src = previewUrl;
+                        downloadBtn.href = downloadUrl;
+                        
+                        modal.classList.add('active');
+                        document.body.style.overflow = 'hidden';
+                    };
+
+                    galleryContainer.appendChild(item);
+                    
+                    // ربط الكرت بالـ Observer لترقبه
+                    imageObserver.observe(item);
+                });
+
+            } catch (error) {
+                console.error(error);
+                if(statusMsg) statusMsg.innerHTML = `⚠️ فشل الاتصال بالسيرفر!`;
+            }
+        }
+
+        function closeModal() {
+            modal.classList.remove('active');
+            modalImg.classList.remove('zoomed');
+            zoomBtn.innerHTML = '<i class="fas fa-search-plus"></i> تكبير';
+            document.body.style.overflow = 'auto';
+            modalImg.src = ""; 
+        }
+
+        closeBtn.onclick = closeModal;
+        modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+
+        zoomBtn.onclick = () => {
+            modalImg.classList.toggle('zoomed');
+            zoomBtn.innerHTML = modalImg.classList.contains('zoomed') ? 
+                '<i class="fas fa-search-minus"></i> تصغير' : '<i class="fas fa-search-plus"></i> تكبير';
+        };
+
+        // 4. ميزة الـ Keyboard Support الذكية (إغلاق المودال بزر الـ ESC)
+        document.addEventListener("keydown", e => {
+            if (e.key === "Escape" && modal.classList.contains('active')) {
+                closeModal();
+            }
+        });
+
+        fetchGallery();
+    </script>
+</body>
+</html>
